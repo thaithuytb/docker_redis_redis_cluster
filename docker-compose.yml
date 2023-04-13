@@ -1,0 +1,71 @@
+#create cluster with docker-compose
+version: '3.8'
+
+services:
+  redis_1:
+    image: redis:6.2
+    container_name: redis_1
+    ports:
+      - "${CLUSTER_NODE_PORT_1}:${CLUSTER_NODE_PORT_1}"
+    command: ["redis-server", "--port", "${CLUSTER_NODE_PORT_1}", "--cluster-enabled", "yes", "--cluster-config-file", "/data/nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--bind", "0.0.0.0"]
+    networks:
+      network_cluster:
+        ipv4_address: ${CLUSTER_NODE_IP_1}
+    volumes:
+      - type: volume
+        source: redis_1
+        target: /data
+  redis_2:
+    image: redis:6.2
+    container_name: redis_2
+    ports:
+      - "${CLUSTER_NODE_PORT_2}:${CLUSTER_NODE_PORT_2}"
+    command: ["redis-server", "--port", "${CLUSTER_NODE_PORT_2}", "--cluster-enabled", "yes", "--cluster-config-file", "/data/nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--bind", "0.0.0.0"]
+    networks:
+      network_cluster:
+        ipv4_address: ${CLUSTER_NODE_IP_2}
+    volumes:
+      - type: volume
+        source: redis_2
+        target: /data
+    depends_on:
+      - redis_1
+  redis_3:
+    image: redis:6.2
+    container_name: redis_3
+    ports:
+      - "${CLUSTER_NODE_PORT_3}:${CLUSTER_NODE_PORT_3}"
+    command: ["redis-server", "--port", "${CLUSTER_NODE_PORT_3}", "--cluster-enabled", "yes", "--cluster-config-file", "/data/nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--bind", "0.0.0.0"]
+    networks:
+      network_cluster:
+        ipv4_address: ${CLUSTER_NODE_IP_3}
+    volumes:
+      - type: volume
+        source: redis_3
+        target: /data
+    depends_on:
+      - redis_2
+  cluster_init:
+    image: redis:6.2
+    container_name: cluster_init
+    depends_on:
+      - redis_1
+      - redis_2
+      - redis_3
+    command: bash -c "sleep 5 && echo 'yes' | redis-cli --cluster create ${CLUSTER_NODE_IP_1}:${CLUSTER_NODE_PORT_1} ${CLUSTER_NODE_IP_2}:${CLUSTER_NODE_PORT_2} ${CLUSTER_NODE_IP_3}:${CLUSTER_NODE_PORT_3} --cluster-replicas 0"
+    networks:
+      network_cluster:
+        ipv4_address: ${CLUSTER_IP_CLUSTER_INIT}
+
+networks:
+  network_cluster:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${CLUSTER_NODE_IP_SUBNET}
+
+volumes:
+  redis_1:
+  redis_2:
+  redis_3:
