@@ -1,0 +1,52 @@
+version: '3.8'
+services:
+{% for port in port_list %}
+  redis_{{ loop.index }}:
+    ports:
+      - "{{ port }}:{{ port }}"
+    image: redis:6.2
+    container_name: redis_{{ loop.index }}
+    command: ["redis-server", "--port", "{{ port }}", "--cluster-enabled", "yes", "--cluster-config-file", "/data/nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--bind", "0.0.0.0"]
+    networks:
+      network_cluster:
+        ipv4_address: {{ ip_list[loop.index-1] }}
+    volumes:
+      - type: volume
+        source: redis_{{ loop.index }}
+        target: /data
+{% if loop.index != 1 %}
+    depends_on:
+      - redis_{{ loop.index - 1 }}
+{% endif %}
+{% endfor %}
+  #need for loop or anything to custom this code
+  cluster_init:
+    image: redis:6.2
+    container_name: cluster_init
+    depends_on:
+      - redis_1
+      - redis_2
+      - redis_3
+    command: bash -c "sleep 5 && echo 'yes' | redis-cli --cluster create {{ ip_list[0] }}:{{ port_list[0] }} {{ ip_list[1] }}:{{ port_list[1] }} {{ ip_list[2] }}:{{ port_list[2] }} --cluster-replicas 0"
+    networks:
+      network_cluster:
+        ipv4_address: {{ ip_init }}
+
+networks:
+  network_cluster:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: {{ ip_subnet }}
+
+volumes:
+  mysql-data:
+    name: mysql-volume
+  mysql-data-test:
+    name: mysql-volume-test
+  redis-data:
+    name: redis-volume
+  redis_1:
+  redis_2:
+  redis_3:

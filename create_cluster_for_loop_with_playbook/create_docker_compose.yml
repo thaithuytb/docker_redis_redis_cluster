@@ -1,0 +1,23 @@
+---
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Include .env file
+      ansible.builtin.include_vars:
+        file: .env.j2
+        name: env_vars
+    - name: Create Docker Compose services
+      become: yes
+      become_user: root
+      become_method: sudo
+      template:
+        src: templates/docker-compose.yml.j2
+        dest: docker-compose.yml
+      vars:
+        ansible_become_pass: "q"
+        port_list: "{{ env_vars.port_list.split(',') }}"
+        ip_list: "{{ env_vars.ip_list.split(',') }}"
+        ip_init: "{{ env_vars.CLUSTER_IP_CLUSTER_INIT }}"
+        ip_subnet: "{{ env_vars.CLUSTER_NODE_IP_SUBNET }}"
+
+#run: ansible-playbook create_docker_compose.yml (to create docker-compose.yml file)

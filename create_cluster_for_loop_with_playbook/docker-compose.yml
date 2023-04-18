@@ -1,0 +1,76 @@
+version: '3.8'
+services:
+  redis_1:
+    ports:
+      - "7010:7010"
+    image: redis:6.2
+    container_name: redis_1
+    command: ["redis-server", "--port", "7010", "--cluster-enabled", "yes", "--cluster-config-file", "/data/nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--bind", "0.0.0.0"]
+    networks:
+      network_cluster:
+        ipv4_address: 192.168.0.10
+    volumes:
+      - type: volume
+        source: redis_1
+        target: /data
+  redis_2:
+    ports:
+      - "7011:7011"
+    image: redis:6.2
+    container_name: redis_2
+    command: ["redis-server", "--port", "7011", "--cluster-enabled", "yes", "--cluster-config-file", "/data/nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--bind", "0.0.0.0"]
+    networks:
+      network_cluster:
+        ipv4_address: 192.168.0.11
+    volumes:
+      - type: volume
+        source: redis_2
+        target: /data
+    depends_on:
+      - redis_1
+  redis_3:
+    ports:
+      - "7012:7012"
+    image: redis:6.2
+    container_name: redis_3
+    command: ["redis-server", "--port", "7012", "--cluster-enabled", "yes", "--cluster-config-file", "/data/nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes", "--bind", "0.0.0.0"]
+    networks:
+      network_cluster:
+        ipv4_address: 192.168.0.12
+    volumes:
+      - type: volume
+        source: redis_3
+        target: /data
+    depends_on:
+      - redis_2
+  #need for loop or anything to custom this code
+  cluster_init:
+    image: redis:6.2
+    container_name: cluster_init
+    depends_on:
+      - redis_1
+      - redis_2
+      - redis_3
+    command: bash -c "sleep 5 && echo 'yes' | redis-cli --cluster create 192.168.0.10:7010 192.168.0.11:7011 192.168.0.12:7012 --cluster-replicas 0"
+    networks:
+      network_cluster:
+        ipv4_address: 192.168.0.10
+
+networks:
+  network_cluster:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.0.0/24
+
+volumes:
+  mysql-data:
+    name: mysql-volume
+  mysql-data-test:
+    name: mysql-volume-test
+  redis-data:
+    name: redis-volume
+  redis_1:
+  redis_2:
+  redis_3:
