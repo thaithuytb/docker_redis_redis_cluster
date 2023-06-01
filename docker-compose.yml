@@ -52,7 +52,7 @@ services:
       - redis_1
       - redis_2
       - redis_3
-    command: bash -c "sleep 5 && echo 'yes' | redis-cli --cluster create ${CLUSTER_NODE_IP_1}:${CLUSTER_NODE_PORT_1} ${CLUSTER_NODE_IP_2}:${CLUSTER_NODE_PORT_2} ${CLUSTER_NODE_IP_3}:${CLUSTER_NODE_PORT_3} --cluster-replicas 0"
+    command: bash -c "sleep 5 ; redis-cli -h ${CLUSTER_NODE_IP_1} -p ${CLUSTER_NODE_PORT_1} flushdb ; redis-cli -h ${CLUSTER_NODE_IP_2} -p ${CLUSTER_NODE_PORT_2} flushdb ; redis-cli -h ${CLUSTER_NODE_IP_3} -p ${CLUSTER_NODE_PORT_3} flushdb ; echo 'yes' | redis-cli --cluster create ${USER_API_HOST_1}:${USER_API_PORT_1} ${USER_API_HOST_2}:${USER_API_PORT_2} ${USER_API_HOST_3}:${USER_API_PORT_3} --cluster-replicas 0"
     networks:
       network_cluster:
         ipv4_address: ${CLUSTER_IP_CLUSTER_INIT}
